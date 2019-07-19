@@ -2,7 +2,7 @@
 
 Retro Tag helps you retrospectively tag resources with the ARN of the user that created them. 
 
-It is a spin off from Auto Tag, which tags resource as they are created.
+It is a spin off from [Auto Tag, which tags resource as they are created](https://github.com/GorillaStack/auto-tag).
 
 This is designed to solve the problem of having untagged resources in your environment.
 

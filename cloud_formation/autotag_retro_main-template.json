@@ -70,7 +70,7 @@
         },
         "Handler" : "autotag_log.handler",
         "Role" : { "Fn::GetAtt" : [ "AutoTagExecutionRole", "Arn" ] },
-        "Runtime" : "nodejs6.10",
+        "Runtime" : "nodejs10.x",
         "Timeout" : 300,
         "Environment": {
           "Variables": {
@@ -242,6 +242,7 @@
                 "dynamodb:TagResource",
                 "ec2:CreateTags",
                 "ec2:DescribeInstances",
+                "iam:Tag*",
                 "elasticloadbalancing:AddTags",
                 "elasticmapreduce:AddTags",
                 "rds:AddTagsToResource",

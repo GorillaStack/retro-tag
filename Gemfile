@@ -1,7 +1,7 @@
 
 source 'https://rubygems.org'
 
-gem 'aws-sdk'
+gem 'aws-sdk', '~> 3'
 gem 'tty-spinner'
 gem 'filesize'
 gem 'terminal-table'

@@ -34,19 +34,30 @@ module AwsResource
         safe_puts "The cache file is too old, building a new cache file..."
         @files_cached = true
 
-        regions = Aws.partition('aws').regions.
-            select {|region| region.services.any? {|r| aws_region_services_name.include? r}}
+        if aws_region_services_name.include? 'IAM'
+          regions = Aws.partition('aws').regions.select { |region| region.name == 'us-east-1' }
+        else
+          regions = Aws.partition('aws').regions.
+            select { |region| region.services.any? { |region| aws_region_services_name.include? region } }
+        end
 
         regions.each do |region|
           safe_puts "Collecting #{friendly_service_name} from: #{region.name}"
           client = aws_client(region: region.name, credentials: credentials)
 
-          client.send(aws_client_method, **aws_client_method_args).each do |describe|
-            describe.send(aws_response_collection).each do |resource|
-              @existing_resources[resource.send_chain(aws_response_resource_name.split('.'))] = region.name
+          begin
+            client.send(aws_client_method, **aws_client_method_args).each do |describe|
+              describe.send(aws_response_collection).each do |resource|
+                @existing_resources[resource.send_chain(aws_response_resource_name.split('.'))] = region.name
+              end
             end
+          rescue Aws::EC2::Errors::AuthFailure, Aws::EMR::Errors::UnrecognizedClientException,
+            Aws::ElasticLoadBalancingV2::Errors::InvalidClientTokenId, Aws::RDS::Errors::InvalidClientTokenId,
+            Aws::DynamoDB::Errors::UnrecognizedClientException, Aws::ElasticLoadBalancing::Errors::InvalidClientTokenId,
+            Aws::AutoScaling::Errors::InvalidClientTokenId, Aws::S3::Errors::InvalidAccessKeyId
+            puts "Error: Skipping disabled region #{region.name}..."
+            next
           end
-
         end
 
         File.open(existing_resources_file, 'w') do |f|

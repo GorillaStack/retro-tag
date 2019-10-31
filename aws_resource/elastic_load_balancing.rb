@@ -73,9 +73,14 @@ module AwsResource
           safe_puts "Collecting #{friendly_service_name} from: #{region.name}"
           client = Aws::ElasticLoadBalancingV2::Client.new(region: region.name, credentials: credentials)
 
-          # add next token code
-          client.send(aws_client_method, **aws_client_method_args).send('load_balancers').each do |resource|
-            @existing_resources[resource.send_chain('load_balancer_arn'.split('.'))] = region.name
+          begin
+            # add next token code
+            client.send(aws_client_method, **aws_client_method_args).send('load_balancers').each do |resource|
+              @existing_resources[resource.send_chain('load_balancer_arn'.split('.'))] = region.name
+            end
+          rescue Aws::ElasticLoadBalancingV2::Errors::InvalidClientTokenId
+            puts "Error: Skipping disabled region #{region.name}..."
+            next
           end
         end
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'bundler/setup'
 require 'aws-sdk'
 require 'json'
 require 'pp'
@@ -87,10 +88,10 @@ lambda  = Aws::Lambda::Client.new(region: lambda_region, credentials: lambda_cre
 spinner = TTY::Spinner.new(':spinner :title', format: :bouncing_ball)
 
 object_args = {
-    csv: csv,
-    credentials: scan_credentials,
-    bucket_name: bucket_name,
-    profile: scan_profile
+  csv: csv,
+  credentials: scan_credentials,
+  bucket_name: bucket_name,
+  profile: scan_profile
 }
 
 services = [
@@ -104,6 +105,8 @@ services = [
     AwsResource::Eip.new(**object_args),
     AwsResource::ElasticLoadBalancing.new(**object_args),
     AwsResource::ElasticMapReduce.new(**object_args),
+    AwsResource::IamUser.new(**object_args),
+    AwsResource::IamRole.new(**object_args),
     AwsResource::OpsWorks.new(**object_args),
     AwsResource::Rds.new(**object_args),
     AwsResource::S3Bucket.new(**object_args),
@@ -213,7 +216,7 @@ if all_cloudtrail_s3_keys.count > 0
         invocation = lambda.invoke(
                        function_name:   lambda_name,
                        invocation_type: 'RequestResponse', # or Event
-                       payload: JSON.dump(event)
+                       payload:         JSON.dump(event)
         )
 
         if invocation.status_code == 200
@@ -234,13 +237,3 @@ if all_cloudtrail_s3_keys.count > 0
 else
   puts 'There were no CloudTrail s3 objects found to process'
 end
-
-
-
-
-
-
-
-
-
-

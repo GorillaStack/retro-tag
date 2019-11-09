@@ -8,11 +8,11 @@ module AwsResource
     end
 
     def friendly_service_name
-      'EC2 AMI'
+      'EC2 AMIs'
     end
 
-    def aws_client(region:,credentials:)
-      Aws::EC2::Client.new(region: region, credentials: credentials)
+    def aws_client(region:)
+      Aws::EC2::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     def aws_client_method

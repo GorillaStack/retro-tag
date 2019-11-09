@@ -9,7 +9,9 @@ require 'filesize'
 require 'terminal-table'
 require 'pastel'
 
-Dir["#{__dir__}/aws_resource/*.rb"].each {|file| require file }
+Dir["#{__dir__}/aws_resource/*.rb"].each { |file| require file }
+
+require "#{__dir__}/auto_tag/summary.rb"
 
 pastel   = Pastel.new
 $bold    = pastel.bold.underline.detach
@@ -58,9 +60,10 @@ bucket_region   = $args['--bucket-region']  ? $args['--bucket-region'] : 'us-eas
 lambda_name     = $args['--lambda']         ? $args['--lambda']         : 'AutoTagRetro'
 lambda_region   = $args['--lambda-region']  ? $args['--lambda-region']  : 'us-east-1'
 lambda_profile  = $args['--lambda-profile'] ? $args['--lambda-profile'] : 'default'
-thread_count    = $args['--lambda_threads'] ? $args['--lambda_threads'] : 3
-csv_file        = $args['--csv']            ? $args['--csv']           : nil
-scan_profile    = $args['--scan-profile']   ? $args['--scan-profile']  : 'default'
+lambda_thread_count = $args['--lambda_threads'] ? $args['--lambda_threads'] : 3
+thread_count        = $args['--threads']        ? $args['--threads']        : 10
+csv_file            = $args['--csv']            ? $args['--csv']            : nil
+scan_profile        = $args['--scan-profile']   ? $args['--scan-profile']   : 'default'
 scan_access_key_id     = $args['--scan-access-key-id']     ? $args['--scan-access-key-id']     : nil
 scan_secret_access_key = $args['--scan-secret-access-key'] ? $args['--scan-secret-access-key'] : nil
 
@@ -95,34 +98,65 @@ object_args = {
 }
 
 services = [
-    AwsResource::AutoScaling.new(**object_args),
-    AwsResource::DataPipeline.new(**object_args),
-    AwsResource::DynamoDbTable.new(**object_args),
-    AwsResource::Ec2Ami.new(**object_args),
-    AwsResource::EC2Instance.new(**object_args),
-    AwsResource::Ec2Snapshot.new(**object_args),
-    AwsResource::Ec2Volume.new(**object_args),
-    AwsResource::Eip.new(**object_args),
-    AwsResource::ElasticLoadBalancing.new(**object_args),
-    AwsResource::ElasticMapReduce.new(**object_args),
-    AwsResource::IamUser.new(**object_args),
-    AwsResource::IamRole.new(**object_args),
-    AwsResource::OpsWorks.new(**object_args),
-    AwsResource::Rds.new(**object_args),
-    AwsResource::S3Bucket.new(**object_args),
-    AwsResource::SecurityGroup.new(**object_args),
-    AwsResource::Vpc.new(**object_args),
-    AwsResource::VpcEni.new(**object_args),
-    AwsResource::VpcInternetGateway.new(**object_args),
-    AwsResource::VpcNatGateway.new(**object_args),
-    AwsResource::VpcNetworkAcl.new(**object_args),
-    AwsResource::VpcPeering.new(**object_args),
-    AwsResource::VpcRouteTable.new(**object_args),
-    AwsResource::VpcSubnet.new(**object_args),
-    AwsResource::Vpn.new(**object_args)
+  AwsResource::AutoScaling.new(**object_args),
+  AwsResource::DataPipeline.new(**object_args),
+  AwsResource::DynamoDbTable.new(**object_args),
+  AwsResource::Ec2Ami.new(**object_args),
+  AwsResource::EC2Instance.new(**object_args),
+  AwsResource::Ec2Snapshot.new(**object_args),
+  AwsResource::Ec2Volume.new(**object_args),
+  AwsResource::Eip.new(**object_args),
+  AwsResource::ElasticLoadBalancing.new(**object_args),
+  AwsResource::ElasticLoadBalancingV2.new(**object_args),
+  AwsResource::ElasticMapReduce.new(**object_args),
+  AwsResource::IamUser.new(**object_args),
+  AwsResource::IamRole.new(**object_args),
+  AwsResource::OpsWorks.new(**object_args),
+  AwsResource::Rds.new(**object_args),
+  AwsResource::S3Bucket.new(**object_args),
+  AwsResource::SecurityGroup.new(**object_args),
+  AwsResource::Vpc.new(**object_args),
+  AwsResource::VpcEni.new(**object_args),
+  AwsResource::VpcInternetGateway.new(**object_args),
+  AwsResource::VpcNatGateway.new(**object_args),
+  AwsResource::VpcNetworkAcl.new(**object_args),
+  AwsResource::VpcPeering.new(**object_args),
+  AwsResource::VpcRouteTable.new(**object_args),
+  AwsResource::VpcSubnet.new(**object_args),
+  AwsResource::Vpn.new(**object_args)
 ]
 
-services.each { |service| service.get_existing_resources }
+####
+# resources
+####
+
+resources_start_time = Time.now
+mutex        = Mutex.new
+threads      = []
+temp         = []
+
+thread_count.times do |i|
+  threads[i] = Thread.new {
+    until services.count.zero?
+
+      aws_resource = services.pop
+      next unless aws_resource
+
+      aws_resource.write_cache_file(method: 'get_resources')
+      mutex.synchronize do
+        temp << aws_resource
+      end
+    end
+  }
+end
+
+threads.each(&:join)
+services = temp.dup.sort_by { |aws_resource| "#{aws_resource.friendly_service_name}" }
+
+resources_finish_time = Time.now - resources_start_time
+puts $heading.call("Completed collecting resources in #{Humanize.time(resources_finish_time)}")
+
+### Processing
 
 processed_count = 0
 csv_count       = csv.count
@@ -138,9 +172,8 @@ csv.each do |event|
 
   spinner.spin
 
-  processed = service.process_cloudtrail_event(event: event)
+  processed_count += 1 if service.process_cloudtrail_event(event: event)
 
-  processed_count += 1 if processed
   csv_count -= 1
 
   spinner.update(title: "#{Humanize.int(csv_count)} events to scan, #{Humanize.int(processed_count)} events selected to be processed...")
@@ -151,6 +184,8 @@ puts "Completed event scan in #{Humanize.time(Time.now - aws_scan_start)}"
 
 # services.each { |service| puts "#{service.friendly_service_name} #{service.aws_event_name} #{service.existing_resources.count}" }
 
+### Summary
+
 summary_rows = []
 services.each_with_index do |service, index|
   summary_rows << %W(#{service.friendly_service_name} #{service.aws_event_name.join(', ')} #{service.existing_resources.count.to_s.rjust(4)})
@@ -158,9 +193,9 @@ services.each_with_index do |service, index|
 end
 
 puts Terminal::Table.new(
-    :title => $bold.call('Retro-Active Tagging for Existing Resources Summary'),
-    :headings => %W[#{$heading.call('Service')} #{$heading.call('Event')} #{$heading.call('Count')}],
-    :rows => summary_rows
+  :title => $bold.call('Retro-Active Tagging for Existing Resources Summary'),
+  :headings => %W[#{$heading.call('Service')} #{$heading.call('Event')} #{$heading.call('Count')}],
+  :rows => summary_rows
 )
 
 # combine all of the s3_keys from all services and uniq
@@ -194,13 +229,13 @@ lambda_start = Time.now
 mutex        = Mutex.new
 threads      = []
 
-puts "Starting #{thread_count} Lambda Function threads..."
+puts "Starting #{lambda_thread_count} Lambda Function threads..."
 
 if all_cloudtrail_s3_keys.count > 0
   spinner.start
   spinner.update(title: "#{Humanize.int(all_cloudtrail_s3_keys.count)} S3 objects to be processed by the #{lambda_name} Lambda Function...")
 
-  thread_count.times do |i|
+  lambda_thread_count.times do |i|
     threads[i] = Thread.new {
       until all_cloudtrail_s3_keys.count.zero?
         mutex.synchronize do
@@ -214,9 +249,9 @@ if all_cloudtrail_s3_keys.count > 0
         event = AwsResource::Default.s3_object_event(bucket_name, bucket_region, s3_key)
 
         invocation = lambda.invoke(
-                       function_name:   lambda_name,
-                       invocation_type: 'RequestResponse', # or Event
-                       payload:         JSON.dump(event)
+                              function_name:   lambda_name,
+                              invocation_type: 'RequestResponse', # or Event
+                              payload:         JSON.dump(event)
         )
 
         if invocation.status_code == 200
@@ -235,5 +270,5 @@ if all_cloudtrail_s3_keys.count > 0
   spinner.success"completed in #{Humanize.time(Time.now - lambda_start)}"
 
 else
-  puts 'There were no CloudTrail s3 objects found to process'
+  puts 'Error: No CloudTrail S3 objects found to process'
 end

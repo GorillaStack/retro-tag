@@ -1,11 +1,27 @@
 require 'aws-sdk'
 require 'json'
 require 'csv'
+require 'yaml'
+
+require "#{__dir__}/../auto_tag/aws_mixin.rb"
 
 module AwsResource
   class Default
 
-    attr_accessor :resource, :csv, :credentials, :cloudtrail_s3_keys, :files_cached, :existing_resources, :bucket_name, :bucket_region, :profile, :cloudtrail_s3
+    attr_accessor :csv,
+                  :client,
+                  :profile,
+                  :resource,
+                  :bucket_name,
+                  :credentials,
+                  :results_bad,
+                  :results_good,
+                  :files_cached,
+                  :bucket_region,
+                  :cloudtrail_s3,
+                  :cloudtrail_s3_keys,
+                  :client_retry_limit,
+                  :existing_resources
 
     def initialize(csv:, credentials:, bucket_name:, profile:)
       @csv           = csv
@@ -17,64 +33,61 @@ module AwsResource
       @existing_resources = {}
       @cloudtrail_s3_keys = []
       @cloudtrail_s3      = {}
+
+      @auto_tag_prefix = 'AutoTag_'
+      @results_good    = []
+      @results_bad     = []
+
+      @client_retry_limit = 8
     end
 
-    def get_existing_resources
-      cache_sub_dir = (credentials.respond_to? :profile_name) ? credentials.profile_name : credentials.access_key_id
-      @cache_dir = "#{__dir__}/../cache/#{cache_sub_dir}"
+    include AwsMixin
 
-      FileUtils.mkdir_p(@cache_dir) unless Dir.exist?(@cache_dir)
-      existing_resources_file = "#{@cache_dir}/#{friendly_service_name.gsub(/\s+/, '_',).downcase}_existing.json"
+    def get_resources
 
-      if File.exists? existing_resources_file
-        file_mtime_diff = Time.now - File.mtime(existing_resources_file)
+      if aws_region_services_name.include? 'IAM'
+        regions = Aws.partition('aws').regions.select { |region| region.name == 'us-east-1' }
+      else
+        regions = Aws.partition('aws').regions.
+          select { |region| region.services.any? { |region| aws_region_services_name.include? region } }
       end
 
-      if !file_mtime_diff or file_mtime_diff > 3600 # 1 hour(s)
-        safe_puts "The cache file is too old, building a new cache file..."
-        @files_cached = true
+      regions.each do |region|
+        next unless region.name == 'us-east-1' if friendly_service_name == 'S3 Buckets'
+        safe_puts "Collecting resources from #{friendly_service_name} in #{region.name}" if $args['--details']
+        @client = aws_client(region: region.name)
 
-        if aws_region_services_name.include? 'IAM'
-          regions = Aws.partition('aws').regions.select { |region| region.name == 'us-east-1' }
-        else
-          regions = Aws.partition('aws').regions.
-            select { |region| region.services.any? { |region| aws_region_services_name.include? region } }
-        end
+        begin
+          client.send(aws_client_method, **aws_client_method_args).each do |describe|
+            describe.send(aws_response_collection).each do |resource|
+              resource_id = resource.is_a?(String) ? resource : resource.send(aws_response_resource_name)
+              resource_id = resource_id_helper(resource_id: resource_id, region: region.name)
+              aws_region  = aws_region_helper(resource_id: resource_id, region: region.name)
 
-        regions.each do |region|
-          safe_puts "Collecting #{friendly_service_name} from: #{region.name}"
-          client = aws_client(region: region.name, credentials: credentials)
-
-          begin
-            client.send(aws_client_method, **aws_client_method_args).each do |describe|
-              describe.send(aws_response_collection).each do |resource|
-                @existing_resources[resource.send_chain(aws_response_resource_name.split('.'))] = region.name
-              end
+              @existing_resources[resource_id] = {
+                region: aws_region,
+                tags: []
+              }
             end
-          rescue Aws::EC2::Errors::AuthFailure, Aws::EMR::Errors::UnrecognizedClientException,
-            Aws::ElasticLoadBalancingV2::Errors::InvalidClientTokenId, Aws::RDS::Errors::InvalidClientTokenId,
-            Aws::DynamoDB::Errors::UnrecognizedClientException, Aws::ElasticLoadBalancing::Errors::InvalidClientTokenId,
-            Aws::AutoScaling::Errors::InvalidClientTokenId, Aws::S3::Errors::InvalidAccessKeyId
-            puts "Error: Skipping disabled region #{region.name}..."
-            next
           end
+        rescue Aws::EC2::Errors::AuthFailure, Aws::EMR::Errors::UnrecognizedClientException,
+          Aws::ElasticLoadBalancingV2::Errors::InvalidClientTokenId, Aws::RDS::Errors::InvalidClientTokenId,
+          Aws::DynamoDB::Errors::UnrecognizedClientException, Aws::ElasticLoadBalancing::Errors::InvalidClientTokenId,
+          Aws::AutoScaling::Errors::InvalidClientTokenId, Aws::S3::Errors::InvalidAccessKeyId
+          puts "Error: Skipping disabled region #{region.name}..."
+          next
         end
-
-        File.open(existing_resources_file, 'w') do |f|
-          f.write(existing_resources.to_json)
-        end
-      else
-        safe_puts "The cache file is #{Humanize.time(file_mtime_diff)} old, using it..."
-        existing_resources_json = File.read(existing_resources_file)
-        @existing_resources = JSON.parse(existing_resources_json)
       end
 
-      if friendly_service_name == 'Elastic Load Balancing'
-        existing_resources_count = existing_resources.reject {|resource| resource.start_with? 'arn'}.count
-      else
-        existing_resources_count = existing_resources.count
-      end
-      safe_puts "Total #{friendly_service_name}: #{Humanize.int(existing_resources_count)}"
+      @files_cached = true
+    end
+
+    def resource_id_helper(resource_id:, region:)
+      resource_id
+    end
+
+    def aws_region_helper(resource_id:, region:)
+      region
     end
 
     def process_cloudtrail_event(event:)

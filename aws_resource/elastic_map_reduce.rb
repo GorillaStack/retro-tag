@@ -11,8 +11,8 @@ module AwsResource
       'EMR Clusters'
     end
 
-    def aws_client(region:,credentials:)
-      Aws::EMR::Client.new(region: region, credentials: credentials)
+    def aws_client(region:)
+      Aws::EMR::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     def aws_client_method
@@ -20,7 +20,8 @@ module AwsResource
     end
 
     def aws_client_method_args
-      {}
+      # {}
+      { cluster_states: %w[STARTING BOOTSTRAPPING RUNNING WAITING] }
     end
 
     def aws_response_collection

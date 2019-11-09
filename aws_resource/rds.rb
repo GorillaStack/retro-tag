@@ -11,8 +11,8 @@ module AwsResource
       'RDS Instances'
     end
 
-    def aws_client(region:,credentials:)
-      Aws::RDS::Client.new(region: region, credentials: credentials)
+    def aws_client(region:)
+      Aws::RDS::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     def aws_client_method

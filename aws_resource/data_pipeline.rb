@@ -11,8 +11,8 @@ module AwsResource
       'Data Pipelines'
     end
 
-    def aws_client(region:,credentials:)
-      Aws::DataPipeline::Client.new(region: region, credentials: credentials)
+    def aws_client(region:)
+      Aws::DataPipeline::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     def aws_client_method

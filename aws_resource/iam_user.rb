@@ -11,8 +11,8 @@ module AwsResource
       'IAM Users'
     end
 
-    def aws_client(region:,credentials:)
-      Aws::IAM::Client.new(region: region, credentials: credentials)
+    def aws_client(region:)
+      Aws::IAM::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     def aws_client_method

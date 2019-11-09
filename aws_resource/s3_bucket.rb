@@ -11,8 +11,8 @@ module AwsResource
       'S3 Buckets'
     end
 
-    def aws_client(region:,credentials:)
-      Aws::S3::Client.new(region: region, credentials: credentials)
+    def aws_client(region:)
+      Aws::S3::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     def aws_client_method
@@ -41,6 +41,16 @@ module AwsResource
 
     def resource_name(**args)
       args[:request_parameters]['bucketName']
+    end
+
+    ##################################
+
+    def aws_region_helper(resource_id:, region:)
+      get_bucket_location = client.get_bucket_location(bucket: resource_id)
+
+      bucket_region = get_bucket_location.location_constraint.empty? ? 'us-east-1' : get_bucket_location.location_constraint
+      bucket_region = 'eu-west-1' if bucket_region == 'EU'
+      bucket_region ? bucket_region : region.name
     end
 
   end

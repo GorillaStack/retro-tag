@@ -11,8 +11,8 @@ module AwsResource
       'OpsWorks Stacks'
     end
 
-    def aws_client(region:,credentials:)
-      Aws::OpsWorks::Client.new(region: region, credentials: credentials)
+    def aws_client(region:)
+      Aws::OpsWorks::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     def aws_client_method
@@ -28,7 +28,8 @@ module AwsResource
     end
 
     def aws_response_resource_name
-      'name'
+      # 'name'
+      'arn'
     end
 
     def aws_event_name

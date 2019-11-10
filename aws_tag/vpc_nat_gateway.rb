@@ -1,14 +1,14 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class VpcNetworkAcl < Default
+module AwsTag
+  class VpcNatGateway < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'VPC Network ACLs'
+      'VPC NAT Gateways'
     end
 
     def aws_client(region:)
@@ -25,7 +25,7 @@ module AwsTags
       {
           filters: [{
                         name: 'resource-type',
-                        values: [ 'network-acl' ]
+                        values: [ 'natgateway' ]
                     }]
       }
     end

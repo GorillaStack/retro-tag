@@ -1,34 +1,34 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class S3Bucket < Default
+module AwsTag
+  class ElasticMapReduce < Default
 
     def aws_region_services_name
-      %w[S3]
+      %w[EMR]
     end
 
     def friendly_service_name
-      'S3 Buckets'
+      'EMR Clusters'
     end
 
     def aws_client(region:)
-      Aws::S3::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
+      Aws::EMR::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     #################################
 
     def tag_client_method
-      'get_bucket_tagging'
+      'describe_cluster'
     end
 
     def tag_client_method_args(region)
       ids = existing_resources.select { |_resource_id, resource| resource[:region] == region }
       ids = ids.keys
-      { buckets: ids }
+      { cluster_ids: ids }
     end
 
     def tag_response_collection
-      'tag_set'
+      'cluster.tags'
     end
 
     def tag_response_resource_name
@@ -41,19 +41,15 @@ module AwsTags
       og_tag_client_method_args = tag_client_method_args(region)
       tag_client_method_args    = og_tag_client_method_args.dup
 
-      if tag_client_method_args[:buckets].count.zero?
-        # puts 'no resource_names found'
+      if tag_client_method_args[:cluster_ids].count.zero?
+        # puts 'no cluster_ids found'
       else
-        tag_client_method_args[:buckets].each_slice(1) do |buckets|
+        tag_client_method_args[:cluster_ids].each_slice(1) do |cluster_ids|
           args = tag_client_method_args.dup
-          args.delete :buckets
-          args[:bucket] = buckets.first
-          begin
-            describe = client.send(tag_client_method, **args)
-          rescue Aws::S3::Errors::NoSuchTagSet
-            next
-          end
-          save_tags(describe: describe, region: region, resource_id: buckets.first)
+          args.delete :cluster_ids
+          args[:cluster_id] = cluster_ids.first
+          describe = client.send(tag_client_method, **args)
+          save_tags(describe: describe, region: region, resource_id: cluster_ids.first)
         end
       end
     end

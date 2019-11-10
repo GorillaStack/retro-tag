@@ -1,20 +1,20 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class VpcNatGateway < Default
+module AwsTag
+  class Ec2Ami < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'VPC NAT Gateways'
+      'EC2 AMIs'
     end
 
     def aws_client(region:)
       Aws::EC2::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
-
+    
     #################################
 
     def tag_client_method
@@ -25,7 +25,7 @@ module AwsTags
       {
           filters: [{
                         name: 'resource-type',
-                        values: [ 'natgateway' ]
+                        values: [ 'image' ]
                     }]
       }
     end

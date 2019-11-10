@@ -1,18 +1,18 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class VpcSubnet < Default
+module AwsTag
+  class AutoScaling < Default
 
     def aws_region_services_name
-      %w[EC2]
+      %w[AutoScaling]
     end
 
     def friendly_service_name
-      'VPC Subnets'
+      'AutoScaling Groups'
     end
 
     def aws_client(region:)
-      Aws::EC2::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
+      Aws::AutoScaling::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     #################################
@@ -22,12 +22,7 @@ module AwsTags
     end
 
     def tag_client_method_args(region)
-      {
-          filters: [{
-                        name: 'resource-type',
-                        values: [ 'subnet' ]
-                    }]
-      }
+      {}
     end
 
     def tag_response_collection

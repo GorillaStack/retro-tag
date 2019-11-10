@@ -8,7 +8,7 @@ require 'pastel'
 require 'terminal-table'
 
 Dir["#{__dir__}/aws_resource/*.rb"].each { |file| require file }
-Dir["#{__dir__}/aws_tags/*.rb"].each     { |file| require file }
+Dir["#{__dir__}/aws_tag/*.rb"].each     { |file| require file }
 
 require "#{__dir__}/auto_tag/summary.rb"
 
@@ -17,19 +17,18 @@ doc = <<DOCOPT
 Audit an AWS account for the tags created by Auto Tag
 
 Usage:
-  #{__FILE__} [--region=REGION] [--profile=PROFILE]
-                [--details] [--stack=STACK_NAME]
+  #{__FILE__} [--profile=PROFILE]
+                [--details] [--details-all]
                 [--user-arn=USER_ARN] [--ignore-cache]
                 [--access-key-id=ACCESS_KEY_ID] [--secret-access-key=SECRET_ACCESS_KEY]
   #{__FILE__} -h | --help
 
 Options:
   -h --help                              Show this screen.
-  -d --details                           Show details for all resources.
-  --region=REGION                        The AWS Region where the stack exists, required if using a StackSet, defaults to scan all regions for Stacks only.
+  -d --details                           Show more details for all resources.
+  --details-all                          Show even more details for all resources.
   --profile=PROFILE                      The AWS credential profile.
-  --stack=STACK_NAME                     The CloudFormation stack name, defaults to "autotag-test".
-  --user-arn=USER_ARN                    The IAM user that executed the CloudFormation template, defaults to the local user's arn.
+  --user-arn=USER_ARN                    The IAM user that executed the CloudFormation template, defaults to the selected AWS profile's user arn.
   --ignore-cache                         Ignore the cache files and start the discovery process from the beginning.
   --access-key-id=ACCESS_KEY_ID          The AWS access key ID for the scanner to verify resources existence
   --secret-access-key=SECRET_ACCESS_KEY  The AWS secret access key for the scanner to verify resources existence
@@ -104,32 +103,32 @@ object_args = {
 }
 
 tags_by_service = [
-  AwsTags::AutoScaling.new(**object_args),
-  AwsTags::DataPipeline.new(**object_args),
-  AwsTags::DynamoDbTable.new(**object_args),
-  AwsTags::Ec2Ami.new(**object_args),
-  AwsTags::EC2Instance.new(**object_args),
-  AwsTags::Ec2Snapshot.new(**object_args),
-  AwsTags::Ec2Volume.new(**object_args),
-  AwsTags::Eip.new(**object_args),
-  AwsTags::ElasticLoadBalancing.new(**object_args),
-  AwsTags::ElasticLoadBalancingV2.new(**object_args),
-  AwsTags::ElasticMapReduce.new(**object_args),
-  AwsTags::IamUser.new(**object_args),
-  AwsTags::IamRole.new(**object_args),
-  AwsTags::OpsWorks.new(**object_args),
-  AwsTags::Rds.new(**object_args),
-  AwsTags::S3Bucket.new(**object_args),
-  AwsTags::SecurityGroup.new(**object_args),
-  AwsTags::Vpc.new(**object_args),
-  AwsTags::VpcEni.new(**object_args),
-  AwsTags::VpcInternetGateway.new(**object_args),
-  AwsTags::VpcNatGateway.new(**object_args),
-  AwsTags::VpcNetworkAcl.new(**object_args),
-  AwsTags::VpcPeering.new(**object_args),
-  AwsTags::VpcRouteTable.new(**object_args),
-  AwsTags::VpcSubnet.new(**object_args),
-  AwsTags::Vpn.new(**object_args)
+  AwsTag::AutoScaling.new(**object_args),
+  AwsTag::DataPipeline.new(**object_args),
+  AwsTag::DynamoDbTable.new(**object_args),
+  AwsTag::Ec2Ami.new(**object_args),
+  AwsTag::EC2Instance.new(**object_args),
+  AwsTag::Ec2Snapshot.new(**object_args),
+  AwsTag::Ec2Volume.new(**object_args),
+  AwsTag::Eip.new(**object_args),
+  AwsTag::ElasticLoadBalancing.new(**object_args),
+  AwsTag::ElasticLoadBalancingV2.new(**object_args),
+  AwsTag::ElasticMapReduce.new(**object_args),
+  AwsTag::IamUser.new(**object_args),
+  AwsTag::IamRole.new(**object_args),
+  AwsTag::OpsWorks.new(**object_args),
+  AwsTag::Rds.new(**object_args),
+  AwsTag::S3Bucket.new(**object_args),
+  AwsTag::SecurityGroup.new(**object_args),
+  AwsTag::Vpc.new(**object_args),
+  AwsTag::VpcEni.new(**object_args),
+  AwsTag::VpcInternetGateway.new(**object_args),
+  AwsTag::VpcNatGateway.new(**object_args),
+  AwsTag::VpcNetworkAcl.new(**object_args),
+  AwsTag::VpcPeering.new(**object_args),
+  AwsTag::VpcRouteTable.new(**object_args),
+  AwsTag::VpcSubnet.new(**object_args),
+  AwsTag::Vpn.new(**object_args)
 ]
 
 
@@ -202,7 +201,6 @@ end
 
 threads.each(&:join)
 tags_by_service = temp.dup
-
 
 puts $heading.call("Completed collecting resources in #{Humanize.time(resources_finish_time)}")
 puts $heading.call("Completed collecting tags in #{Humanize.time(Time.now - tags_start_time)}")

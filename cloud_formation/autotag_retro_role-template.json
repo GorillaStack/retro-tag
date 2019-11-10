@@ -7,7 +7,7 @@
       "Type" : "String"
     },
     "MainStackName" : {
-      "Description" : "The name of the name of the main stack",
+      "Description" : "The name of the main stack",
       "Type" : "String",
       "Default" : "AutoTagRetro"
     }

@@ -1,14 +1,14 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class Ec2Volume < Default
+module AwsTag
+  class VpcPeering < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'EC2 Volumes'
+      'VPC Peering Connections'
     end
 
     def aws_client(region:)
@@ -25,7 +25,7 @@ module AwsTags
       {
           filters: [{
                         name: 'resource-type',
-                        values: [ 'volume' ]
+                        values: [ 'vpc-peering-connection' ]
                     }]
       }
     end

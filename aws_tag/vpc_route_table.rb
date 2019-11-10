@@ -1,20 +1,20 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class AutoScaling < Default
+module AwsTag
+  class VpcRouteTable < Default
 
     def aws_region_services_name
-      %w[AutoScaling]
+      %w[EC2]
     end
 
     def friendly_service_name
-      'AutoScaling Groups'
+      'VPC Route Tables'
     end
 
     def aws_client(region:)
-      Aws::AutoScaling::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
+      Aws::EC2::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
-
+    
     #################################
 
     def tag_client_method
@@ -22,7 +22,12 @@ module AwsTags
     end
 
     def tag_client_method_args(region)
-      {}
+      {
+          filters: [{
+                        name: 'resource-type',
+                        values: [ 'route-table' ]
+                    }]
+      }
     end
 
     def tag_response_collection

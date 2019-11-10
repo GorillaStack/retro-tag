@@ -1,14 +1,14 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class Ec2Ami < Default
+module AwsTag
+  class VpcEni < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'EC2 AMIs'
+      'VPC ENIs'
     end
 
     def aws_client(region:)
@@ -25,7 +25,7 @@ module AwsTags
       {
           filters: [{
                         name: 'resource-type',
-                        values: [ 'image' ]
+                        values: [ 'network-interface' ]
                     }]
       }
     end

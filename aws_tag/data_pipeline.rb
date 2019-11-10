@@ -1,6 +1,6 @@
 require "#{__dir__}/default"
 
-module AwsTags
+module AwsTag
   class DataPipeline < Default
 
     def aws_region_services_name
@@ -22,7 +22,7 @@ module AwsTags
     end
 
     def tag_client_method_args(region)
-      ids = @existing_resources.select { |resource_id, resource| resource[:region] == region }
+      ids = @existing_resources.select { |_resource_id, resource| resource[:region] == region }
       { pipeline_ids: ids.keys } # TODO: this is bad
     end
 

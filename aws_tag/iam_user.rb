@@ -1,6 +1,6 @@
 require "#{__dir__}/default"
 
-module AwsTags
+module AwsTag
   class IamUser < Default
 
     def aws_region_services_name

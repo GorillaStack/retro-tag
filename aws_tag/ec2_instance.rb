@@ -1,6 +1,6 @@
 require "#{__dir__}/default"
 
-module AwsTags
+module AwsTag
   class EC2Instance < Default
 
     def aws_region_services_name

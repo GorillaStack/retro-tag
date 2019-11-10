@@ -1,24 +1,24 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class DynamoDbTable < Default
+module AwsTag
+  class OpsWorks < Default
 
     def aws_region_services_name
-      %w[DynamoDB]
+      %w[OpsWorks]
     end
 
     def friendly_service_name
-      'DynamoDB Tables'
+      'OpsWorks Stacks'
     end
 
     def aws_client(region:)
-      Aws::DynamoDB::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
+      Aws::OpsWorks::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
 
     #################################
 
     def tag_client_method
-      'list_tags_of_resource'
+      'list_tags'
     end
 
     def tag_client_method_args(region)
@@ -32,7 +32,7 @@ module AwsTags
     end
 
     def tag_response_resource_name
-      '' # all
+      ''
     end
 
     ##################################
@@ -44,8 +44,11 @@ module AwsTags
       unless tag_client_method_args[:resource_arn].count.zero?
         tag_client_method_args[:resource_arn].each_slice(1) do |resource_arn|
           tag_client_method_args[:resource_arn] = resource_arn.first
-          describe = client.send(tag_client_method, **tag_client_method_args)
-          save_tags(describe: describe, region: region, resource_id: resource_arn.first)
+          describe  = client.send(tag_client_method, **tag_client_method_args)
+          list_tags = describe.tags.map { |name, value| { 'key' => name, 'value' => value } }
+          list_tags = { tags: list_tags, last_page?: true }
+          tags = OpenStruct.new list_tags
+          save_tags(describe: tags, region: region, resource_id: resource_arn.first)
         end
       end
     end

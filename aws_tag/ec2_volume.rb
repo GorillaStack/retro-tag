@@ -1,14 +1,14 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class VpcInternetGateway < Default
+module AwsTag
+  class Ec2Volume < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'VPC Internet Gateways'
+      'EC2 Volumes'
     end
 
     def aws_client(region:)
@@ -25,7 +25,7 @@ module AwsTags
       {
           filters: [{
                         name: 'resource-type',
-                        values: [ 'internet-gateway' ]
+                        values: [ 'volume' ]
                     }]
       }
     end

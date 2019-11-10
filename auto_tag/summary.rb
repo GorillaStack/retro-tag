@@ -102,6 +102,7 @@ module AutoTag
         else
           required_tags_suffix = %w[Creator CreateTime]
         end
+
         required_tags = required_tags_suffix.map { |suffix| "#{auto_tag_prefix}#{suffix}" }
 
         results_good_sum = 0
@@ -112,6 +113,7 @@ module AutoTag
             results_bad_sum += required_tags.count
             next
           end
+
           required_tags_dup = required_tags.dup
 
           resource[:tags].each do |tag|
@@ -122,8 +124,8 @@ module AutoTag
               required_tags_dup.delete(tag[:key])
               results_good_sum += 1
             elsif tag[:key] == "#{auto_tag_prefix}InvokedBy"
-            #   results_good_sum += 1
-           elsif tag[:key] == 'Name'
+              # Do Nothing
+            elsif tag[:key] == 'Name'
               # Do nothing
             else
               failed_checks << tag
@@ -136,7 +138,7 @@ module AutoTag
           end
         end
 
-        results_bad  = service_resources.select { |resource_id, resource| resource.has_key? :bad_result }
+        results_bad  = service_resources.select { |_resource_id, resource| resource.has_key? :bad_result }
         coverage_percentage = results_good_sum.percent_of(results_bad_sum + results_good_sum)
         coverage = case
                      when coverage_percentage < 60
@@ -169,80 +171,6 @@ module AutoTag
           :rows => rows
       )
     end
-
-    def test_summary(iam, describe_stacks)
-      # TODO: INCOMPLETE
-      cgw_prefix = 'user/cgw-'
-      if $args['--user-arn']
-        user = $args['--user-arn']
-      else
-        user = iam.get_user
-        # special processing for me, heh
-        if user.user['arn'].include? cgw_prefix
-          user = user.user['arn'].split('-')[0...-1].join('-')
-        else
-          user = user.user['arn']
-        end
-      end
-
-      stack_creation_time = describe_stacks.stacks.first['creation_time']
-      invoked_by_services = %w[cloudformation autoscaling opsworks]
-      failed_checks = []
-
-      pastel = Pastel.new
-      good   = pastel.green.detach
-      bad    = pastel.red.detach
-
-      results_good_sum = 0
-      results_bad_sum  = 0
-
-      $results_good.each do |tags|
-        tags.each do |tag|
-          #
-          if tag[:key] == "#{auto_tag_prefix}Creator"
-            # special processing for me, heh
-            if tag[:value].include? cgw_prefix
-              creator = tag[:value].split('-')[0...-1].join('-')
-            else
-              creator = tag[:value]
-            end
-            if creator == user
-              results_good_sum += 1
-            else
-              failed_checks << tag
-              results_bad_sum  += 1
-            end
-          elsif tag[:key] == "#{auto_tag_prefix}CreateTime"
-            tag_create_time = Time.parse tag[:value]
-            if tag_create_time >= stack_creation_time and tag_create_time <= Time.now.utc
-              results_good_sum += 1
-            else
-              failed_checks << tag
-              results_bad_sum  += 1
-            end
-          elsif tag[:key] == "#{auto_tag_prefix}InvokedBy" and invoked_by_services.any? { |s| tag[:value].include? s }
-            results_good_sum += 1
-          elsif tag[:key] == 'Name' and tag[:value].include? 'AutoTagTest'
-            results_good_sum += 1
-          else
-            failed_checks << tag
-            results_bad_sum  += 1
-          end
-        end
-      end
-      $results_bad.each  { |result| results_bad_sum  += 1 }
-
-      puts
-      puts "Test Results: #{good.call(results_good_sum)} Checks Passed and #{bad.call(results_bad_sum)} Checks Failed"
-      puts "CloudFormation Stack Status: [#{describe_stacks.stacks.first['stack_status']}]"
-
-      puts $error.call("Failed Checks:") if failed_checks.count > 0 or $results_bad.count > 0
-      puts failed_checks if failed_checks.count > 0
-      puts $results_bad  if $results_bad.count  > 0
-      puts
-      puts
-    end
-
   end
 end
 

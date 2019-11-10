@@ -3,7 +3,7 @@ require 'yaml'
 
 require "#{__dir__}/../auto_tag/aws_mixin.rb"
 
-module AwsTags
+module AwsTag
   class Default
 
     attr_accessor :credentials, :auto_tag_prefix, :existing_tags, :existing_resources, :auto_tags_view, :results_good, :results_bad, :client_retry_limit

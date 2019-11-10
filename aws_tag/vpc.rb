@@ -1,20 +1,20 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class Eip < Default
+module AwsTag
+  class Vpc < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'EC2 EIPs'
+      'VPCs'
     end
 
     def aws_client(region:)
       Aws::EC2::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
-
+    
     #################################
 
     def tag_client_method
@@ -25,7 +25,7 @@ module AwsTags
       {
           filters: [{
                         name: 'resource-type',
-                        values: [ 'elastic-ip' ]
+                        values: [ 'vpc' ]
                     }]
       }
     end

@@ -1,14 +1,14 @@
 require "#{__dir__}/default"
 
-module AwsTags
-  class VpcPeering < Default
+module AwsTag
+  class VpcInternetGateway < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'VPC Peering Connections'
+      'VPC Internet Gateways'
     end
 
     def aws_client(region:)
@@ -25,7 +25,7 @@ module AwsTags
       {
           filters: [{
                         name: 'resource-type',
-                        values: [ 'vpc-peering-connection' ]
+                        values: [ 'internet-gateway' ]
                     }]
       }
     end

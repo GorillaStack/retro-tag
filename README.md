@@ -1,5 +1,9 @@
 # Retro Tag
 
+[![Software License](https://img.shields.io/github/license/gorillastack/retro-tag.svg?style=for-the-badge)](/LICENSE)
+![GitHub last commit](https://img.shields.io/github/last-commit/gorillastack/retro-tag.svg?style=for-the-badge)
+[![Powered By: GorillaStack](https://img.shields.io/badge/powered%20by-GorillaStack-green.svg?style=for-the-badge)](https://www.gorillastack.com)
+
 Retro Tag helps you retrospectively tag resources with the ARN of the user that created them and the creation date/time using the [Auto Tag](https://github.com/GorillaStack/auto-tag) engine, and supports tagging across multiple regions and across AWS accounts.
 
 This is designed to solve the problem of [Auto Tagging](https://github.com/GorillaStack/auto-tag) existing resources in your environments. 

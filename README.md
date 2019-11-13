@@ -14,11 +14,16 @@ Retro Tag uses the log data in your AWS CloudTrail S3 bucket logs to gather info
 
 ## Installation
 
-The installation consists of a single `Main` CloudFormation Stack with the AutoTag Lambda function in the same account as the CloudTrail S3 Bucket, and a `Role` CloudFormation Stack deployed to each account where tagging will be applied.
+The installation consists of a `CSV` created from AWS Athena scanning
+the CloudTrail S3 bucket, a single `Main` CloudFormation Stack with the
+AutoTag Lambda function in the same account as the CloudTrail S3 Bucket,
+and a `Role` CloudFormation Stack deployed to each account where tagging
+will be applied.
 
 ### Query CloudTrail logs using AWS Athena
 
-Use AWS Athena to scan your history of CloudTrail logs in S3 and retrospectively tag existing AWS resources.
+Use AWS Athena to scan your history of CloudTrail logs in S3 and produce
+a CSV file of events that we can process.
 
 WARNING: You are charged for AWS Athena based on the amount the data that is scanned.
 
@@ -30,49 +35,49 @@ Update the table name, S3 bucket, S3 path including the AWS account ID to query.
 
 ```sql
 CREATE EXTERNAL TABLE IF NOT EXISTS my_table_name (
-eventversion STRING,
-userIdentity STRUCT<
-               type:STRING,
-               principalid:STRING,
-               arn:STRING,
-               accountid:STRING,
-               invokedby:STRING,
-               accesskeyid:STRING,
-               userName:STRING,
-sessioncontext:STRUCT<
-attributes:STRUCT<
-               mfaauthenticated:STRING,
-               creationdate:STRING>,
-sessionIssuer:STRUCT<  
-               type:STRING,
-               principalId:STRING,
-               arn:STRING, 
-               accountId:STRING,
-               userName:STRING>>>,
-eventTime STRING,
-eventSource STRING,
-eventName STRING,
-awsRegion STRING,
-sourceIpAddress STRING,
-userAgent STRING,
-errorCode STRING,
-errorMessage STRING,
-requestParameters STRING,
-responseElements STRING,
-additionalEventData STRING,
-requestId STRING,
-eventId STRING,
-resources ARRAY<STRUCT<
-               ARN:STRING,
-               accountId:STRING,
-               type:STRING>>,
-eventType STRING,
-apiVersion STRING,
-readOnly STRING,
-recipientAccountId STRING,
-serviceEventDetails STRING,
-sharedEventID STRING,
-vpcEndpointId STRING
+    eventversion STRING,
+    userIdentity STRUCT<
+        type:STRING,
+        principalid:STRING,
+        arn:STRING,
+        accountid:STRING,
+        invokedby:STRING,
+        accesskeyid:STRING,
+        userName:STRING,
+    sessioncontext:STRUCT<
+    attributes:STRUCT<
+        mfaauthenticated:STRING,
+        creationdate:STRING>,
+    sessionIssuer:STRUCT<  
+        type:STRING,
+        principalId:STRING,
+        arn:STRING, 
+        accountId:STRING,
+        userName:STRING>>>,
+    eventTime STRING,
+    eventSource STRING,
+    eventName STRING,
+    awsRegion STRING,
+    sourceIpAddress STRING,
+    userAgent STRING,
+    errorCode STRING,
+    errorMessage STRING,
+    requestParameters STRING,
+    responseElements STRING,
+    additionalEventData STRING,
+    requestId STRING,
+    eventId STRING,
+    resources ARRAY<STRUCT<
+        ARN:STRING,
+        accountId:STRING,
+        type:STRING>>,
+    eventType STRING,
+    apiVersion STRING,
+    readOnly STRING,
+    recipientAccountId STRING,
+    serviceEventDetails STRING,
+    sharedEventID STRING,
+    vpcEndpointId STRING
 )
 ROW FORMAT SERDE 'com.amazon.emr.hive.serde.CloudTrailSerde'
 STORED AS INPUTFORMAT 'com.amazon.emr.cloudtrail.CloudTrailInputFormat'
@@ -148,15 +153,18 @@ export REGION=ap-southeast-2 # set this to the region you plan to deploy to
 wget https://raw.githubusercontent.com/GorillaStack/retro-tag/master/cloud_formation/autotag_retro_main-template.json
 
 aws cloudformation create-stack \
-	--template-body file://autotag_retro_main-template.json \
-	--stack-name AutoTagRetro \
-	--parameters ParameterKey=CloudTrailBucketName,ParameterValue=my-cloudtrail-bucket \
-	   ParameterKey=CodeS3Bucket,ParameterValue=gorillastack-autotag-releases-$REGION \
-      ParameterKey=CodeS3Path,ParameterValue=autotag-0.5.0.zip \
-      ParameterKey=AutoTagDebugLogging,ParameterValue=Disabled \
-      ParameterKey=AutoTagTagsCreateTime,ParameterValue=Enabled \
-      ParameterKey=AutoTagTagsInvokedBy,ParameterValue=Enabled	--capabilities CAPABILITY_NAMED_IAM \
-	--region $REGION
+  --template-body file://autotag_retro_main-template.json \
+  --stack-name AutoTagRetro \
+  --parameters \
+     ParameterKey=CloudTrailBucketName,ParameterValue=my-cloudtrail-bucket \
+     ParameterKey=CodeS3Bucket,ParameterValue=gorillastack-autotag-releases-$REGION \
+     ParameterKey=CodeS3Path,ParameterValue=autotag-0.5.1.zip \
+     ParameterKey=AutoTagDebugLogging,ParameterValue=Disabled \
+     ParameterKey=AutoTagTagsCreateTime,ParameterValue=Enabled \
+     ParameterKey=AutoTagTagsInvokedBy,ParameterValue=Enabled \
+     ParameterKey=LogRetentionInDays,ParameterValue=731 \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region $REGION
 ```
 
 ### Deploy the IAM Role CloudFormation template
@@ -170,12 +178,13 @@ export MAIN_AWS_ACCOUNT_NUMBER=11111111111 # set this to the AWS account number 
 wget https://raw.githubusercontent.com/GorillaStack/retro-tag/master/cloud_formation/autotag_retro_role-template.json
 
 aws cloudformation create-stack \
-	--template-body file://autotag_retro_role-template.json \
-	--stack-name AutoTagRetro \
-	--parameters ParameterKey=MainAwsAccountNumber,ParameterValue=$MAIN_AWS_ACCOUNT_NUMBER \
-	   ParameterKey=MainStackName,ParameterValue=AutoTagRetro \
-	--capabilities CAPABILITY_NAMED_IAM \
-	--region $REGION
+  --template-body file://autotag_retro_role-template.json \
+  --stack-name AutoTagRetro \
+  --parameters \
+     ParameterKey=MainAwsAccountNumber,ParameterValue=$MAIN_AWS_ACCOUNT_NUMBER \
+     ParameterKey=MainStackName,ParameterValue=AutoTagRetro \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region $REGION
 ```
 
 ### Tag Existing Resources
@@ -186,7 +195,7 @@ The script will start by scanning each region for the AWS resources that exist t
 
 ```bash
 $ bundle install # run this once to grab the ruby gem dependencies
-Bundle complete! 6 Gemfile dependencies, 210 gems now installed.
+Bundle complete! 17 Gemfile dependencies, 28 gems now installed.
 
 export CSV_PATH="~/Downloads/MyAwsAccount_10292019.csv" # set this to the CSV exported from Athena
 export BUCKET=my-cloudtrail-bucket  # set this to the name of the CloudTrail S3 bucket
@@ -196,12 +205,12 @@ export LAMBDA_PROFILE=development   # set this to a profile of the account where
 export LAMBDA_REGION=ap-southeast-2 # set this to the region where the Main CloudFormation template was deployed
 
 ./retro_tag.rb \
-	--csv "$CSV_PATH" \
-	--bucket $BUCKET \
-	--bucket-region $BUCKET_REGION \
-	--scan-profile "$SCAN_PROFILE" \
-	--lambda-profile "$LAMBDA_PROFILE" \
-	--lambda-region $LAMBDA_REGION
+  --csv "$CSV_PATH" \
+  --bucket $BUCKET \
+  --bucket-region $BUCKET_REGION \
+  --scan-profile "$SCAN_PROFILE" \
+  --lambda-profile "$LAMBDA_PROFILE" \
+  --lambda-region $LAMBDA_REGION
 ```
 
 ## Audit AutoTags

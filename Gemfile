@@ -1,7 +1,19 @@
 
 source 'https://rubygems.org'
 
-gem 'aws-sdk', '~> 3'
+gem 'aws-sdk-lambda', '~>1'
+gem 'aws-sdk-autoscaling', '~>1'
+gem 'aws-sdk-datapipeline', '~>1'
+gem 'aws-sdk-dynamodb', '~>1'
+gem 'aws-sdk-ec2', '~>1'
+gem 'aws-sdk-elasticloadbalancing', '~>1'
+gem 'aws-sdk-elasticloadbalancingv2', '~>1'
+gem 'aws-sdk-emr', '~>1'
+gem 'aws-sdk-iam', '~>1'
+gem 'aws-sdk-opsworks', '~>1'
+gem 'aws-sdk-rds', '~>1'
+gem 'aws-sdk-s3', '~>1'
+
 gem 'tty-spinner'
 gem 'filesize'
 gem 'terminal-table'

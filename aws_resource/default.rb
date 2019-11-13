@@ -1,4 +1,4 @@
-require 'aws-sdk'
+# require 'aws-sdk'
 require 'json'
 require 'csv'
 require 'yaml'

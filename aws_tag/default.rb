@@ -1,4 +1,4 @@
-require 'aws-sdk'
+# require 'aws-sdk'
 require 'yaml'
 
 require "#{__dir__}/../auto_tag/aws_mixin.rb"

@@ -32,7 +32,7 @@ module AwsResource
     end
 
     def aws_event_name
-      %w[CreateImage CopyImage ImportImage RegisterImage]
+      %w[CreateImage CopyImage RegisterImage]
     end
 
     def resource_name_exists?(**args)

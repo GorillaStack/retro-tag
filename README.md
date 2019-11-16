@@ -122,7 +122,6 @@ eventName in (
     'CreateVpc',
     'CreateVpnConnection',
     'CreateVpcPeeringConnection',
-    'ImportImage',
     'ImportSnapshot',
     'RegisterImage',
     'RunInstances',
@@ -169,7 +168,7 @@ aws cloudformation create-stack \
 
 ### Deploy the IAM Role CloudFormation template
 
-In each AWS accounts where tagging will be applied deploy this IAM Role CloudFormation template in a single region. 
+In each **additional** AWS accounts where tagging will be applied deploy this IAM Role CloudFormation template in a single region. 
 
 ```bash
 export REGION=ap-southeast-2               # set this to the region you plan to deploy to

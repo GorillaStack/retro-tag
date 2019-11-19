@@ -2,6 +2,9 @@
 
 require 'bundler/setup'
 require 'aws-sdk-autoscaling'
+require 'aws-sdk-cloudwatch'
+require 'aws-sdk-cloudwatchevents'
+require 'aws-sdk-cloudwatchlogs'
 require 'aws-sdk-datapipeline'
 require 'aws-sdk-dynamodb'
 require 'aws-sdk-ec2'
@@ -57,6 +60,7 @@ Options:
   --scan-access-key-id=ACCESS_KEY_ID          The AWS access key ID for the scanner to verify resources existence
   --scan-secret-access-key=SECRET_ACCESS_KEY  The AWS secret access key for the scanner to verify resources existence
   --ignore-cache                              Ignore the cache files and start the discovery process from the beginning.
+  --skip-unsupported-events                   Skip any unsupported events in the CSV.
 
 DOCOPT
 
@@ -66,11 +70,11 @@ rescue Docopt::Exit => e
   puts e.message
 end
 
-bucket_name     = $args['--bucket']         ? $args['--bucket']        : nil
-bucket_region   = $args['--bucket-region']  ? $args['--bucket-region'] : 'us-east-1'
-lambda_name     = $args['--lambda']         ? $args['--lambda']         : 'AutoTagRetro'
-lambda_region   = $args['--lambda-region']  ? $args['--lambda-region']  : 'us-east-1'
-lambda_profile  = $args['--lambda-profile'] ? $args['--lambda-profile'] : 'default'
+bucket_name     = $args['--bucket']             ? $args['--bucket']         : nil
+bucket_region   = $args['--bucket-region']      ? $args['--bucket-region']  : 'us-east-1'
+lambda_name     = $args['--lambda']             ? $args['--lambda']         : 'AutoTagRetro'
+lambda_region   = $args['--lambda-region']      ? $args['--lambda-region']  : 'us-east-1'
+lambda_profile  = $args['--lambda-profile']     ? $args['--lambda-profile'] : 'default'
 lambda_thread_count = $args['--lambda_threads'] ? $args['--lambda_threads'] : 3
 thread_count        = $args['--threads']        ? $args['--threads']        : 10
 csv_file            = $args['--csv']            ? $args['--csv']            : nil
@@ -110,9 +114,14 @@ object_args = {
 
 services = [
   AwsResource::AutoScaling.new(**object_args),
+  AwsResource::CloudWatchAlarm.new(**object_args),
+  AwsResource::CloudWatchLogGroup.new(**object_args),
+  AwsResource::CloudWatchEventsRule.new(**object_args),
   AwsResource::DataPipeline.new(**object_args),
   AwsResource::DynamoDbTable.new(**object_args),
   AwsResource::Ec2Ami.new(**object_args),
+  AwsResource::Ec2CustomerGateway.new(**object_args),
+  AwsResource::Ec2DhcpOptions.new(**object_args),
   AwsResource::EC2Instance.new(**object_args),
   AwsResource::Ec2Snapshot.new(**object_args),
   AwsResource::Ec2Volume.new(**object_args),
@@ -122,6 +131,7 @@ services = [
   AwsResource::ElasticMapReduce.new(**object_args),
   AwsResource::IamUser.new(**object_args),
   AwsResource::IamRole.new(**object_args),
+  AwsResource::LambdaFunction.new(**object_args),
   AwsResource::OpsWorks.new(**object_args),
   AwsResource::Rds.new(**object_args),
   AwsResource::S3Bucket.new(**object_args),
@@ -134,7 +144,8 @@ services = [
   AwsResource::VpcPeering.new(**object_args),
   AwsResource::VpcRouteTable.new(**object_args),
   AwsResource::VpcSubnet.new(**object_args),
-  AwsResource::Vpn.new(**object_args)
+  AwsResource::VpnConnection.new(**object_args),
+  AwsResource::VpnGateway.new(**object_args),
 ]
 
 ####
@@ -179,7 +190,12 @@ csv.each do |event|
   event_name = event['eventName'].to_s
   service    = services.find { |service| service.aws_event_name.include? event_name }
 
-  raise "Can't process #{event_name}" if service.nil?
+
+  if $args['--skip-unsupported-events']
+    next if service.nil?
+  else
+    raise "Can't process #{event_name}" if service.nil?
+  end
 
   spinner.spin
 

@@ -1,14 +1,14 @@
 require "#{__dir__}/default"
 
 module AwsResource
-  class Vpn < Default
+  class VpnConnection < Default
 
     def aws_region_services_name
       %w[EC2]
     end
 
     def friendly_service_name
-      'VPNs'
+      'VPN Connections'
     end
 
     def aws_client(region:)

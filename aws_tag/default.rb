@@ -37,7 +37,9 @@ module AwsTag
         rescue Aws::EC2::Errors::AuthFailure, Aws::EMR::Errors::UnrecognizedClientException,
           Aws::ElasticLoadBalancingV2::Errors::InvalidClientTokenId, Aws::RDS::Errors::InvalidClientTokenId,
           Aws::DynamoDB::Errors::UnrecognizedClientException, Aws::ElasticLoadBalancing::Errors::InvalidClientTokenId,
-          Aws::AutoScaling::Errors::InvalidClientTokenId, Aws::S3::Errors::InvalidAccessKeyId
+          Aws::AutoScaling::Errors::InvalidClientTokenId, Aws::S3::Errors::InvalidAccessKeyId,
+          Aws::Lambda::Errors::UnrecognizedClientException, Aws::CloudWatch::Errors::InvalidClientTokenId,
+          Aws::CloudWatchLogs::Errors::UnrecognizedClientException, Aws::CloudWatchEvents::Errors::UnrecognizedClientException
           puts "Error: Skipping disabled region #{region.name}..."
           next
         end
@@ -53,22 +55,16 @@ module AwsTag
     end
 
     def save_tags(describe:, region:, resource_id: nil)
-      describe.send_chain(tag_response_collection.split('.')).each do |tags|
-        og_tags = tags.dup
-        tags = tags.tags if tags.respond_to? :tags
-        tags = [tags] unless tags.is_a? Array
+      describe.send_chain(tag_response_collection.split('.')).each do |tag|
+        resource_id_final = resource_id ? resource_id : tag[tag_response_resource_name]
 
-        next if tags.count.zero?
-        tags.each do |tags|
-          resource_id_final = resource_id ? resource_id : og_tags[tag_response_resource_name]
-          @existing_tags << {
-              region: region,
-              resource_id: resource_id_final,
-              key: tags['key'],
-              value: tags['value'],
-              resource_type: friendly_service_name
-          }
-        end
+        @existing_tags << {
+          region:        region,
+          resource_id:   resource_id_final,
+          key:           tag['key'],
+          value:         tag['value'],
+          resource_type: friendly_service_name
+        }
       end
     end
   end

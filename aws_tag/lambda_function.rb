@@ -1,38 +1,38 @@
 require "#{__dir__}/default"
 
 module AwsTag
-  class ElasticLoadBalancing < Default
+  class LambdaFunction < Default
 
     def aws_region_services_name
-      %w(ElasticLoadBalancing)
+      'Lambda'
     end
 
     def friendly_service_name
-      'Elastic Load Balancing'
+      'Lambda Functions'
     end
 
     def aws_client(region:)
-      Aws::ElasticLoadBalancing::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
+      Aws::Lambda::Client.new(region: region, credentials: credentials, retry_limit: client_retry_limit)
     end
-
+    
     #################################
 
     def tag_client_method
-      'describe_tags'
+      'list_tags'
     end
 
     def tag_client_method_args(region)
       ids = existing_resources.select { |_resource_id, resource| resource[:region] == region }
       ids = ids.keys
-      { load_balancer_names: ids }
+      { function_arns: ids }
     end
 
     def tag_response_collection
-      'tag_descriptions'
+      ''
     end
 
     def tag_response_resource_name
-      'load_balancer_name'
+      ''
     end
 
     ##################################
@@ -41,30 +41,36 @@ module AwsTag
       og_tag_client_method_args = tag_client_method_args(region)
       tag_client_method_args    = og_tag_client_method_args.dup
 
-      if tag_client_method_args[:load_balancer_names].count.zero?
-        # puts 'no resource_names found'
+      # pp tag_client_method_args
+
+      if tag_client_method_args[:function_arns].count.zero?
+        # puts 'no function_arns found'
       else
-        tag_client_method_args[:load_balancer_names].each_slice(20) do |load_balancer_names|
+        tag_client_method_args[:function_arns].each_slice(1) do |function_arn|
           args = tag_client_method_args.dup
-          args[:load_balancer_names] = load_balancer_names
+          args.delete :function_arns
+          args[:resource] = function_arn.first
           describe = client.send(tag_client_method, **args)
-          save_tags(describe: describe, region: region)
+          save_tags(describe: describe, region: region, resource_id: function_arn.first)
         end
       end
     end
 
     def save_tags(describe:, region:, resource_id: nil)
       describe.send_chain(tag_response_collection.split('.')).each do |tags|
-        og_tags = tags.dup
-        tags    = tags.tags
 
         next if tags.count.zero?
-        tags.each do |tag|
+        tags.each do |tag_key, tag_value|
+          resource_id_final = resource_id ? resource_id : tags[tag_response_resource_name]
+
+          # puts 'adsf'
+          # puts "#{tag_key} #{tag_value} #{resource_id_final}"
+
           @existing_tags << {
             region:        region,
-            resource_id:   og_tags[tag_response_resource_name],
-            key:           tag['key'],
-            value:         tag['value'],
+            resource_id:   resource_id_final,
+            key:           tag_key,
+            value:         tag_value,
             resource_type: friendly_service_name
           }
         end

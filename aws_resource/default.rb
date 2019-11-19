@@ -73,7 +73,9 @@ module AwsResource
         rescue Aws::EC2::Errors::AuthFailure, Aws::EMR::Errors::UnrecognizedClientException,
           Aws::ElasticLoadBalancingV2::Errors::InvalidClientTokenId, Aws::RDS::Errors::InvalidClientTokenId,
           Aws::DynamoDB::Errors::UnrecognizedClientException, Aws::ElasticLoadBalancing::Errors::InvalidClientTokenId,
-          Aws::AutoScaling::Errors::InvalidClientTokenId, Aws::S3::Errors::InvalidAccessKeyId
+          Aws::AutoScaling::Errors::InvalidClientTokenId, Aws::S3::Errors::InvalidAccessKeyId,
+          Aws::Lambda::Errors::UnrecognizedClientException, Aws::CloudWatch::Errors::InvalidClientTokenId,
+          Aws::CloudWatchLogs::Errors::UnrecognizedClientException, Aws::CloudWatchEvents::Errors::UnrecognizedClientException
           puts "Error: Skipping disabled region #{region.name}..."
           next
         end

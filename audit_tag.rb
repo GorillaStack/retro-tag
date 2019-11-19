@@ -3,6 +3,9 @@
 require 'bundler/setup'
 require 'aws-sdk-lambda'
 require 'aws-sdk-autoscaling'
+require 'aws-sdk-cloudwatch'
+require 'aws-sdk-cloudwatchevents'
+require 'aws-sdk-cloudwatchlogs'
 require 'aws-sdk-datapipeline'
 require 'aws-sdk-dynamodb'
 require 'aws-sdk-ec2'
@@ -82,9 +85,14 @@ object_args = {
 
 resources_by_service = [
   AwsResource::AutoScaling.new(**object_args),
+  AwsResource::CloudWatchAlarm.new(**object_args),
+  AwsResource::CloudWatchLogGroup.new(**object_args),
+  AwsResource::CloudWatchEventsRule.new(**object_args),
   AwsResource::DataPipeline.new(**object_args),
   AwsResource::DynamoDbTable.new(**object_args),
   AwsResource::Ec2Ami.new(**object_args),
+  AwsResource::Ec2CustomerGateway.new(**object_args),
+  AwsResource::Ec2DhcpOptions.new(**object_args),
   AwsResource::EC2Instance.new(**object_args),
   AwsResource::Ec2Snapshot.new(**object_args),
   AwsResource::Ec2Volume.new(**object_args),
@@ -94,6 +102,7 @@ resources_by_service = [
   AwsResource::ElasticMapReduce.new(**object_args),
   AwsResource::IamUser.new(**object_args),
   AwsResource::IamRole.new(**object_args),
+  AwsResource::LambdaFunction.new(**object_args),
   AwsResource::OpsWorks.new(**object_args),
   AwsResource::Rds.new(**object_args),
   AwsResource::S3Bucket.new(**object_args),
@@ -106,7 +115,8 @@ resources_by_service = [
   AwsResource::VpcPeering.new(**object_args),
   AwsResource::VpcRouteTable.new(**object_args),
   AwsResource::VpcSubnet.new(**object_args),
-  AwsResource::Vpn.new(**object_args)
+  AwsResource::VpnConnection.new(**object_args),
+  AwsResource::VpnGateway.new(**object_args),
 ]
 
 object_args = {
@@ -115,9 +125,14 @@ object_args = {
 
 tags_by_service = [
   AwsTag::AutoScaling.new(**object_args),
+  AwsTag::CloudWatchAlarm.new(**object_args),
+  AwsTag::CloudWatchLogGroup.new(**object_args),
+  AwsTag::CloudWatchEventsRule.new(**object_args),
   AwsTag::DataPipeline.new(**object_args),
   AwsTag::DynamoDbTable.new(**object_args),
   AwsTag::Ec2Ami.new(**object_args),
+  AwsTag::Ec2CustomerGateway.new(**object_args),
+  AwsTag::Ec2DhcpOptions.new(**object_args),
   AwsTag::EC2Instance.new(**object_args),
   AwsTag::Ec2Snapshot.new(**object_args),
   AwsTag::Ec2Volume.new(**object_args),
@@ -127,6 +142,7 @@ tags_by_service = [
   AwsTag::ElasticMapReduce.new(**object_args),
   AwsTag::IamUser.new(**object_args),
   AwsTag::IamRole.new(**object_args),
+  AwsTag::LambdaFunction.new(**object_args),
   AwsTag::OpsWorks.new(**object_args),
   AwsTag::Rds.new(**object_args),
   AwsTag::S3Bucket.new(**object_args),
@@ -139,7 +155,8 @@ tags_by_service = [
   AwsTag::VpcPeering.new(**object_args),
   AwsTag::VpcRouteTable.new(**object_args),
   AwsTag::VpcSubnet.new(**object_args),
-  AwsTag::Vpn.new(**object_args)
+  AwsTag::VpnConnection.new(**object_args),
+  AwsTag::VpnGateway.new(**object_args),
 ]
 
 
@@ -195,11 +212,16 @@ thread_count.times do |i|
         aws_resources_find.friendly_service_name == aws_tags.friendly_service_name
       end
 
+      unless aws_resources
+        puts "Couldn't find matching resources for #{aws_tags.friendly_service_name}, exiting..."
+        exit 1
+      end
+
       begin
         aws_tags.write_cache_file(method: 'get_tags', existing_resources: aws_resources.existing_resources)
       rescue
         safe_puts "Failed to process: #{aws_tags.friendly_service_name}"
-        safe_puts aws_resources.existing_resources.to_s
+        safe_puts aws_resources.existing_resources.to_s if aws_resources.existing_resources
         raise
       end
 

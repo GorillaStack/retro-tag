@@ -17,7 +17,7 @@ Retro Tag uses the log data in your AWS CloudTrail S3 bucket logs to gather info
 The installation consists of a `CSV` created from AWS Athena scanning
 the CloudTrail S3 bucket, a single `Main` CloudFormation Stack with the
 AutoTag Lambda function in the same account as the CloudTrail S3 Bucket,
-and a `Role` CloudFormation Stack deployed to each account where tagging
+and a `Role` CloudFormation Stack deployed to each additional account where tagging
 will be applied.
 
 ### Query CloudTrail logs using AWS Athena
@@ -102,10 +102,15 @@ eventName in (
     'CopySnapshot',
     'CreateAutoScalingGroup',
     'CreateBucket',
+    'CreateCustomerGateway',
     'CreateDBInstance',
+    'CreateDhcpOptions',
+    'CreateFunction20150331',
+    'CreateFunction20141111',
     'CreateImage',
     'CreateInternetGateway',
     'CreateLoadBalancer',
+    'CreateLogGroup',
     'CreateNatGateway',
     'CreateNetworkAcl',
     'CreateNetworkInterface',
@@ -121,8 +126,11 @@ eventName in (
     'CreateVolume',
     'CreateVpc',
     'CreateVpnConnection',
+    'CreateVpnGateway',
     'CreateVpcPeeringConnection',
     'ImportSnapshot',
+    'PutMetricAlarm',
+    'PutRule',
     'RegisterImage',
     'RunInstances',
     'RunJobFlow'
@@ -132,9 +140,13 @@ and eventSource in (
     'datapipeline.amazonaws.com',
     'dynamodb.amazonaws.com',
     'ec2.amazonaws.com',
+    'events.amazonaws.com',
     'elasticloadbalancing.amazonaws.com',
     'elasticmapreduce.amazonaws.com',
     'iam.amazonaws.com',
+    'lambda.amazonaws.com',
+    'logs.amazonaws.com',
+    'monitoring.amazonaws.com',
     'opsworks.amazonaws.com',
     'rds.amazonaws.com',
     's3.amazonaws.com'
@@ -168,7 +180,7 @@ aws cloudformation create-stack \
 
 ### Deploy the IAM Role CloudFormation template
 
-In each **additional** AWS accounts where tagging will be applied deploy this IAM Role CloudFormation template in a single region. 
+In each *additional* AWS account where tagging will be applied, deploy this IAM Role CloudFormation template in a single region. 
 
 ```bash
 export REGION=ap-southeast-2               # set this to the region you plan to deploy to
@@ -226,63 +238,77 @@ Each resource's tags are inspected for the existence of the `AutoTag_Creator` an
 
 Example Output:
 
-```bash
+```json
 +---------------------------+--------+--------+----------+
 |                 Auto-Tag Audit Summary                 |
 +---------------------------+--------+--------+----------+
 | Service                   | Passed | Failed | Coverage |
 +---------------------------+--------+--------+----------+
-| AutoScaling Groups        |     64 |      6 |   91.43% |
+| AutoScaling Groups        |     62 |      6 |   91.18% |
 +---------------------------+--------+--------+----------+
-| Data Pipelines            |     84 |     14 |   85.71% |
+| CloudWatch Alarms         |  2,034 |  1,904 |   51.65% |
 +---------------------------+--------+--------+----------+
-| DynamoDB Tables           |    578 |    152 |   79.18% |
+| CloudWatch Events Rules   |     64 |      0 |   100.0% |
 +---------------------------+--------+--------+----------+
-| EC2 AMIs                  |    138 |     70 |   66.35% |
+| CloudWatch Log Groups     |    680 |    110 |   86.08% |
 +---------------------------+--------+--------+----------+
-| EC2 EIPs                  |     56 |    124 |   31.11% |
+| Data Pipelines            |     82 |     14 |   85.42% |
 +---------------------------+--------+--------+----------+
-| EC2 Instances             |    294 |     48 |   85.96% |
+| DynamoDB Tables           |    564 |    148 |   79.21% |
 +---------------------------+--------+--------+----------+
-| EC2 Snapshots             |     78 |    272 |   22.29% |
+| EC2 AMIs                  |    178 |     30 |   85.58% |
 +---------------------------+--------+--------+----------+
-| EC2 Volumes               |    470 |     58 |   89.02% |
+| EC2 Customer Gateways     |      2 |      6 |    25.0% |
++---------------------------+--------+--------+----------+
+| EC2 DHCP Options Sets     |     10 |     46 |   17.86% |
++---------------------------+--------+--------+----------+
+| EC2 EIPs                  |     52 |    124 |   29.55% |
++---------------------------+--------+--------+----------+
+| EC2 Instances             |    282 |     48 |   85.45% |
++---------------------------+--------+--------+----------+
+| EC2 Snapshots             |    260 |     90 |   74.29% |
++---------------------------+--------+--------+----------+
+| EC2 Volumes               |    452 |     58 |   88.63% |
 +---------------------------+--------+--------+----------+
 | EMR Clusters              |      2 |      0 |   100.0% |
 +---------------------------+--------+--------+----------+
-| Elastic Load Balancing    |    100 |     38 |   72.46% |
+| Elastic Load Balancing    |     98 |     38 |   72.06% |
 +---------------------------+--------+--------+----------+
 | Elastic Load Balancing V2 |      2 |      0 |   100.0% |
 +---------------------------+--------+--------+----------+
-| IAM Roles                 |    340 |     88 |   79.44% |
+| IAM Roles                 |    338 |     90 |   78.97% |
 +---------------------------+--------+--------+----------+
-| IAM Users                 |    292 |     46 |   86.39% |
+| IAM Users                 |    276 |     46 |   85.71% |
 +---------------------------+--------+--------+----------+
-| OpsWorks Stacks           |     17 |      4 |   80.95% |
+| Lambda Functions          |    152 |      0 |   100.0% |
 +---------------------------+--------+--------+----------+
-| RDS Instances             |     27 |     12 |   69.23% |
+| OpsWorks Stacks           |     16 |      4 |    80.0% |
 +---------------------------+--------+--------+----------+
-| S3 Buckets                |    160 |    170 |   48.48% |
+| RDS Instances             |     25 |     12 |   67.57% |
 +---------------------------+--------+--------+----------+
-| Security Groups           |  1,036 |    520 |   66.58% |
+| S3 Buckets                |    158 |    170 |   48.17% |
 +---------------------------+--------+--------+----------+
-| VPC ENIs                  |    618 |    114 |   84.43% |
+| Security Groups           |    994 |    514 |   65.92% |
 +---------------------------+--------+--------+----------+
-| VPC Internet Gateways     |     62 |     20 |   75.61% |
+| VPC ENIs                  |    602 |    112 |   84.31% |
 +---------------------------+--------+--------+----------+
-| VPC NAT Gateways          |     26 |      4 |   86.67% |
+| VPC Internet Gateways     |     60 |     20 |    75.0% |
 +---------------------------+--------+--------+----------+
-| VPC Network ACLs          |     14 |     90 |   13.46% |
+| VPC NAT Gateways          |     24 |      4 |   85.71% |
 +---------------------------+--------+--------+----------+
-| VPC Peering Connections   |     54 |      6 |    90.0% |
+| VPC Network ACLs          |     12 |     84 |    12.5% |
 +---------------------------+--------+--------+----------+
-| VPC Route Tables          |    170 |    122 |   58.22% |
+| VPC Peering Connections   |     52 |      8 |   86.67% |
 +---------------------------+--------+--------+----------+
-| VPC Subnets               |    386 |     84 |   82.13% |
+| VPC Route Tables          |    166 |    116 |   58.87% |
 +---------------------------+--------+--------+----------+
-| VPCs                      |     68 |     18 |   79.07% |
+| VPC Subnets               |    380 |     84 |    81.9% |
 +---------------------------+--------+--------+----------+
-| VPNs                      |     10 |      2 |   83.33% |
+| VPCs                      |     62 |     18 |    77.5% |
++---------------------------+--------+--------+----------+
+| VPN Connections           |      8 |      2 |    80.0% |
++---------------------------+--------+--------+----------+
+| VPN Gateways              |     24 |     14 |   63.16% |
 +---------------------------+--------+--------+----------+
 ```
 

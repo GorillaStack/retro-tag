@@ -48,6 +48,24 @@ module AwsTag
         end
       end
     end
+
+    def save_tags(describe:, region:, resource_id: nil)
+      describe.send_chain(tag_response_collection.split('.')).each do |tags|
+        og_tags = tags.dup
+        tags    = tags.tags
+
+        next if tags.count.zero?
+        tags.each do |tag|
+          @existing_tags << {
+            region:        region,
+            resource_id:   og_tags[tag_response_resource_name],
+            key:           tag['key'],
+            value:         tag['value'],
+            resource_type: friendly_service_name
+          }
+        end
+      end
+    end
   end
 
 end

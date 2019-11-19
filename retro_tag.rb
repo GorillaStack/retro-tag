@@ -44,7 +44,7 @@ Usage:
                 [--lambda=LAMBDA_NAME] [--lambda-profile=LAMBDA_PROFILE] [--lambda-region=LAMBDA_REGION]
                 [--threads=THREADS_COUNT] [--scan-profile=SCAN_PROFILE]
                 [--scan-access-key-id=ACCESS_KEY_ID] [--scan-secret-access-key=SECRET_ACCESS_KEY]
-                [--ignore-cache]
+                [--ignore-cache] [--skip-unsupported-events]
   #{__FILE__} -h | --help
 
 Options:
@@ -68,6 +68,7 @@ begin
   $args = Docopt::docopt(doc)
 rescue Docopt::Exit => e
   puts e.message
+  exit 0
 end
 
 bucket_name     = $args['--bucket']             ? $args['--bucket']         : nil

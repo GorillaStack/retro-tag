@@ -42,7 +42,7 @@ Apply retro-active AutoTags to a single account using an Athena CSV from CloudTr
 Usage:
   #{__FILE__} --csv=CSV_FILE --bucket=BUCKET_NAME [--bucket-region=BUCKET_REGION]
                 [--lambda=LAMBDA_NAME] [--lambda-profile=LAMBDA_PROFILE] [--lambda-region=LAMBDA_REGION]
-                [--threads=THREADS_COUNT] [--scan-profile=SCAN_PROFILE]
+                [--lambda-threads=LAMBDA_THREADS] [--scan-profile=SCAN_PROFILE]
                 [--scan-access-key-id=ACCESS_KEY_ID] [--scan-secret-access-key=SECRET_ACCESS_KEY]
                 [--ignore-cache] [--skip-unsupported-events]
   #{__FILE__} -h | --help
@@ -76,7 +76,7 @@ bucket_region   = $args['--bucket-region']      ? $args['--bucket-region']  : 'u
 lambda_name     = $args['--lambda']             ? $args['--lambda']         : 'AutoTagRetro'
 lambda_region   = $args['--lambda-region']      ? $args['--lambda-region']  : 'us-east-1'
 lambda_profile  = $args['--lambda-profile']     ? $args['--lambda-profile'] : 'default'
-lambda_thread_count = $args['--lambda_threads'] ? $args['--lambda_threads'] : 3
+lambda_thread_count = $args['--lambda-threads'] ? $args['--lambda-threads'] : 3
 thread_count        = $args['--threads']        ? $args['--threads']        : 10
 csv_file            = $args['--csv']            ? $args['--csv']            : nil
 scan_profile        = $args['--scan-profile']   ? $args['--scan-profile']   : 'default'

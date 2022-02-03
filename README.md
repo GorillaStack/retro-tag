@@ -173,7 +173,6 @@ aws cloudformation create-stack \
      ParameterKey=AutoTagDebugLogging,ParameterValue=Disabled \
      ParameterKey=AutoTagTagsCreateTime,ParameterValue=Enabled \
      ParameterKey=AutoTagTagsInvokedBy,ParameterValue=Enabled \
-     ParameterKey=LogRetentionInDays,ParameterValue=731 \
   --capabilities CAPABILITY_NAMED_IAM \
   --region $REGION
 ```

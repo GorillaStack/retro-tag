@@ -70,7 +70,7 @@
         },
         "Handler" : "autotag_log.handler",
         "Role" : { "Fn::GetAtt" : [ "AutoTagExecutionRole", "Arn" ] },
-        "Runtime" : "nodejs10.x",
+        "Runtime" : "nodejs18.x",
         "Timeout" : 300,
         "Environment": {
           "Variables": {

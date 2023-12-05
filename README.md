@@ -158,6 +158,16 @@ and errorcode is null
 
 In the same account as your CloudTrail S3 bucket deploy this Main CloudFormation template in a single region. This one CloudFormation stack, in combination with the IAM Role CloudFormation stack, will have the ability to tag all regions and more than one AWS account.
 
+**Note:** An explanation of each of the parameters:
+
+```
+CloudTrailBucketName - Name of bucket where your CloudTrail logs are stored.
+
+CodeS3Bucket - Name of bucket where AutoTag code is stored. You will need to have either downloaded a zip of a AutoTag release and upload it to your own bucket, or refer to the bucket where your AutoTag code is stored if you also have AutoTag running inside the same AWS account.
+
+CodeS3Path - Path to the zip file containing the AutoTag code inside the CodeS3Bucket.
+```
+
 ```bash
 export REGION=ap-southeast-2 # set this to the region you plan to deploy to
 
@@ -311,9 +321,12 @@ Example Output:
 +---------------------------+--------+--------+----------+
 ```
 
+## FAQ
+### Supported Ruby versions
+The retro tagging and audit logging functions were confirmed to be working on Ruby version 2.6.6.
+
 ## Contributing
 
 If you have questions, feature requests or bugs to report, please do so on [the issues section of our github repository](https://github.com/GorillaStack/retro-tag/issues).
 
 If you are interested in contributing, please get started by forking our GitHub repository and submit a pull-request.
-
